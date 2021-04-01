@@ -1,0 +1,187 @@
+---
+title: 'Frontier 1 : Corpus description'
+author: "Claude Grasland"
+date: "27/03/2021"
+output:
+  pdf_document: 
+    keep_tex: yes
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(kableExtra)
+library(quanteda)
+library(data.table)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+```
+
+
+
+## Corpus description
+
+We have collected titles of news declared as *international*  as long as we have depicted the existence of at less one foreign country in the text of the title. In each of the 5 countries, we have selected three newspapers with national audience and available through mediacloud database from mid 2013 to mid 2020. 
+
+
+
+```{r}
+hc_FRA<-readRDS("corpus/FRA/hc_FRA_states_mobil.Rdata")
+hc_FRA<-hc_FRA[who %in%  c("fr_FRA_lmonde", "fr_FRA_figaro","fr_FRA_lacroi"),]
+hc_FRA[,.N,list(who)]
+
+hc_DEU<-readRDS("corpus/DEU/hc_DEU_states_mobil.Rdata")
+hc_DEU<-hc_DEU[who %in%  c("de_DEU_suddeu", "de_DEU_diewel","de_DEU_frankf"),]
+hc_DEU[,.N,list(who)]
+
+
+hc_GBR<-readRDS("corpus/GBR/hc_GBR_states_mobil.Rdata")
+hc_GBR<-hc_GBR[who %in%  c("en_GBR_guardi", "en_GBR_indept","en_GBR_dailyt"),]
+hc_GBR[,.N,list(who)]
+
+hc_ITA<-readRDS("corpus/ITA/hc_ITA_states_mobil.Rdata")
+hc_ITA<-hc_ITA[who %in%  c("it_ITA_stampa", "it_ITA_repubb","it_ITA_messag"),]
+hc_ITA[,.N,list(who)]
+
+hc_ESP<-readRDS("corpus/ESP/hc_ESP_states_mobil.Rdata")
+hc_ESP<-hc_ESP[who %in%  c("es_ESP_mundo", "es_ESP_abcxxx","es_ESP_percat"),]
+hc_ESP[,.N,list(who)]
+
+hc<-rbind(hc_FRA,hc_DEU,hc_GBR, hc_ITA, hc_ESP)
+hc<-hc[order==1,]
+```
+
+
+
+### Table 1 :  news by media and year
+
+Distribution is reasonably homogeneous. number of news is divided in two in 2013 and 2020 because only half a year was collected. 
+
+```{r}
+tab <- hc 
+tab$year<-substr(as.character(tab$when),1,4)
+tab<-tab[is.na(tab$year)==F]
+tab <- tab[,.(n = round(sum(news),0)), list(year,who)]
+tab<-dcast(tab,who~year, fill=0)
+mat<-as.matrix(tab[,-1])
+row.names(mat)<-tab$who
+tabfin <- addmargins(mat)
+kable(tabfin)
+
+
+```
+
+
+
+### Figure 1 : news by country and month
+
+```{r}
+tab <- hc 
+tab$month<-cut(tab$when,breaks = "month")
+tab$country<-substr(tab$who,4,6)
+tab <- tab[,.(n = round(sum(news),0)), list(month,country)]
+tab$month<-as.Date(tab$month)
+p <- ggplot(tab, aes(x=month, y = n,colour=country)) +
+      geom_line() +
+      ggtitle("Total number of foreign news by host country",
+              subtitle = "Source : Mediacloud")
+p
+ggsave(plot=p, filename = "fig_news_country_month.pdf")
+
+```
+
+## World coverage
+
+What is the distribution of foreign news in each country ?
+
+
+
+```{r}
+tab<-hc
+tab <- tab[,.(n = round(sum(news),0)), list(where1,who)]
+tab<-dcast(tab,where1~who, fill=0)
+mat<-as.matrix(tab[,-1])
+row.names(mat)<-tab$where1
+```
+
+
+### Correspondance Analysis
+
+```{r}
+library(FactoMineR)
+library(explor)
+mat2<-mat[!rownames(mat) %in% c("FRA","GBR","DEU","ITA","ESP"),]
+afc <- CA(mat2,graph = FALSE)
+#explor(afc)
+```
+### Cluster Analysis / host
+
+```{r}
+cah1 <- HCPC(afc,cluster.CA = "columns",nb.clust = 5, graph = F)
+plot.HCPC(cah1, choice = "tree",title = "Clustering of newspaper")
+
+pdf(file = "Fig_cluster_media.pdf")
+plot.HCPC(cah1, choice = "tree",title = "Clustering of newspaper")
+dev.off()
+```
+
+### Cluster Analysis / guest
+
+```{r}
+cah2 <- HCPC(afc,cluster.CA = "rows",nb.clust = 6, graph = F)
+plot.HCPC(cah2, choice = "tree",title = "Clustering of guest countries")
+x<-cah2$data.clust
+
+tab<-x %>% group_by(clust) %>% summarise_all(.funs = sum)
+tabcont<-as.data.frame(tab[,-1])
+row.names(tabcont)<-tab$clust
+tabcont<-as.matrix(tabcont)
+colnames(tabcont)<-substr(colnames(tabcont),1,2)
+
+
+library(vcd)
+mosaicplot(tabcont,shade = T)
+
+```
+
+
+```{r} 
+library(sf)
+library(cartography)
+map<-st_read("map/world_of_states_2020.shp")
+don<-cah2$data.clust
+don$ISO3<-row.names(don)
+mapdon<-merge(map,don,by="ISO3",all.x=T,all.y=F)
+
+
+mapdon$typo<-as.factor(mapdon$clust)
+levels(mapdon$typo)
+levels(mapdon$typo) <-c("1.UK",
+                        "2.UK & France",
+                        "3.Germany & Italy",
+                        "4.Italy & France",
+                        "1.France",
+                        "6.Spain")
+par(mar=c(0,0,0,0))
+typoLayer(mapdon,var ="typo",
+          col = c("pink","lightblue","orange","lightgreen","blue","lightyellow"))
+
+
+pdf("map_typo_guest.pdf")
+mapdon$typo<-as.factor(mapdon$clust)
+levels(mapdon$typo)
+levels(mapdon$typo) <-c("1.UK",
+                        "2.UK & France",
+                        "3.Germany & Italy",
+                        "4.Italy & France",
+                        "1.France",
+                        "6.Spain")
+par(mar=c(0,0,0,0))
+typoLayer(mapdon,var ="typo",
+          col = c("pink","lightblue","orange","lightgreen","blue","lightyellow"))
+dev.off()
+
+
+
+```

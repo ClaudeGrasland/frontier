@@ -1,0 +1,283 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+%
+\documentclass[
+]{article}
+\usepackage{amsmath,amssymb}
+\usepackage{lmodern}
+\usepackage{ifxetex,ifluatex}
+\ifnum 0\ifxetex 1\fi\ifluatex 1\fi=0 % if pdftex
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math}
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{xcolor}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\IfFileExists{bookmark.sty}{\usepackage{bookmark}}{\usepackage{hyperref}}
+\hypersetup{
+  pdftitle={Frontier 1 : Corpus description},
+  pdfauthor={Claude Grasland},
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+\urlstyle{same} % disable monospaced font for URLs
+\usepackage[margin=1in]{geometry}
+\usepackage{color}
+\usepackage{fancyvrb}
+\newcommand{\VerbBar}{|}
+\newcommand{\VERB}{\Verb[commandchars=\\\{\}]}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\}}
+% Add ',fontsize=\small' for more characters per line
+\usepackage{framed}
+\definecolor{shadecolor}{RGB}{248,248,248}
+\newenvironment{Shaded}{\begin{snugshade}}{\end{snugshade}}
+\newcommand{\AlertTok}[1]{\textcolor[rgb]{0.94,0.16,0.16}{#1}}
+\newcommand{\AnnotationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\AttributeTok}[1]{\textcolor[rgb]{0.77,0.63,0.00}{#1}}
+\newcommand{\BaseNTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\BuiltInTok}[1]{#1}
+\newcommand{\CharTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\CommentTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\CommentVarTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ConstantTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\ControlFlowTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\DataTypeTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{#1}}
+\newcommand{\DecValTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\DocumentationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ErrorTok}[1]{\textcolor[rgb]{0.64,0.00,0.00}{\textbf{#1}}}
+\newcommand{\ExtensionTok}[1]{#1}
+\newcommand{\FloatTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\FunctionTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\ImportTok}[1]{#1}
+\newcommand{\InformationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\KeywordTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\NormalTok}[1]{#1}
+\newcommand{\OperatorTok}[1]{\textcolor[rgb]{0.81,0.36,0.00}{\textbf{#1}}}
+\newcommand{\OtherTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
+\newcommand{\PreprocessorTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\RegionMarkerTok}[1]{#1}
+\newcommand{\SpecialCharTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\SpecialStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\StringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\VariableTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\VerbatimStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\WarningTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\usepackage{graphicx}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+% Set default figure placement to htbp
+\makeatletter
+\def\fps@figure{htbp}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{wrapfig}
+\usepackage{float}
+\usepackage{colortbl}
+\usepackage{pdflscape}
+\usepackage{tabu}
+\usepackage{threeparttable}
+\usepackage{threeparttablex}
+\usepackage[normalem]{ulem}
+\usepackage{makecell}
+\usepackage{xcolor}
+\ifluatex
+  \usepackage{selnolig}  % disable illegal ligatures
+\fi
+
+\title{Frontier 1 : Corpus description}
+\author{Claude Grasland}
+\date{27/03/2021}
+
+\begin{document}
+\maketitle
+
+\hypertarget{corpus-description}{%
+\subsection{Corpus description}\label{corpus-description}}
+
+We have collected titles of news declared as \emph{international} as
+long as we have depicted the existence of at less one foreign country in
+the text of the title. In each of the 5 countries, we have selected
+three newspapers with national audience and available through mediacloud
+database from mid 2013 to mid 2020.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{hc\_FRA}\OtherTok{\textless{}{-}}\FunctionTok{readRDS}\NormalTok{(}\StringTok{"corpus/FRA/hc\_FRA\_states\_mobil.Rdata"}\NormalTok{)}
+\NormalTok{hc\_FRA}\OtherTok{\textless{}{-}}\NormalTok{hc\_FRA[who }\SpecialCharTok{\%in\%}  \FunctionTok{c}\NormalTok{(}\StringTok{"fr\_FRA\_lmonde"}\NormalTok{, }\StringTok{"fr\_FRA\_figaro"}\NormalTok{,}\StringTok{"fr\_FRA\_lacroi"}\NormalTok{),]}
+\NormalTok{hc\_FRA[,.N,}\FunctionTok{list}\NormalTok{(who)]}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##              who      N
+## 1: fr_FRA_lmonde 104176
+## 2: fr_FRA_figaro 240318
+## 3: fr_FRA_lacroi 249445
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{hc\_DEU}\OtherTok{\textless{}{-}}\FunctionTok{readRDS}\NormalTok{(}\StringTok{"corpus/DEU/hc\_DEU\_states\_mobil.Rdata"}\NormalTok{)}
+\NormalTok{hc\_DEU}\OtherTok{\textless{}{-}}\NormalTok{hc\_DEU[who }\SpecialCharTok{\%in\%}  \FunctionTok{c}\NormalTok{(}\StringTok{"de\_DEU\_suddeu"}\NormalTok{, }\StringTok{"de\_DEU\_diewel"}\NormalTok{,}\StringTok{"de\_DEU\_frankf"}\NormalTok{),]}
+\NormalTok{hc\_DEU[,.N,}\FunctionTok{list}\NormalTok{(who)]}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##              who      N
+## 1: de_DEU_suddeu  83774
+## 2: de_DEU_diewel 112065
+## 3: de_DEU_frankf 103111
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{hc\_GBR}\OtherTok{\textless{}{-}}\FunctionTok{readRDS}\NormalTok{(}\StringTok{"corpus/GBR/hc\_GBR\_states\_mobil.Rdata"}\NormalTok{)}
+\NormalTok{hc\_GBR}\OtherTok{\textless{}{-}}\NormalTok{hc\_GBR[who }\SpecialCharTok{\%in\%}  \FunctionTok{c}\NormalTok{(}\StringTok{"en\_GBR\_guardi"}\NormalTok{, }\StringTok{"en\_GBR\_indept"}\NormalTok{,}\StringTok{"en\_GBR\_dailyt"}\NormalTok{),]}
+\NormalTok{hc\_GBR[,.N,}\FunctionTok{list}\NormalTok{(who)]}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##              who      N
+## 1: en_GBR_dailyt  62657
+## 2: en_GBR_indept 156128
+## 3: en_GBR_guardi 171949
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{hc\_ITA}\OtherTok{\textless{}{-}}\FunctionTok{readRDS}\NormalTok{(}\StringTok{"corpus/ITA/hc\_ITA\_states\_mobil.Rdata"}\NormalTok{)}
+\NormalTok{hc\_ITA}\OtherTok{\textless{}{-}}\NormalTok{hc\_ITA[who }\SpecialCharTok{\%in\%}  \FunctionTok{c}\NormalTok{(}\StringTok{"it\_ITA\_stampa"}\NormalTok{, }\StringTok{"it\_ITA\_repubb"}\NormalTok{,}\StringTok{"it\_ITA\_messag"}\NormalTok{),]}
+\NormalTok{hc\_ITA[,.N,}\FunctionTok{list}\NormalTok{(who)]}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##              who      N
+## 1: it_ITA_stampa  90059
+## 2: it_ITA_messag 104909
+## 3: it_ITA_repubb  86468
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{hc\_ESP}\OtherTok{\textless{}{-}}\FunctionTok{readRDS}\NormalTok{(}\StringTok{"corpus/ESP/hc\_ESP\_states\_mobil.Rdata"}\NormalTok{)}
+\NormalTok{hc\_ESP}\OtherTok{\textless{}{-}}\NormalTok{hc\_ESP[who }\SpecialCharTok{\%in\%}  \FunctionTok{c}\NormalTok{(}\StringTok{"es\_ESP\_mundo"}\NormalTok{, }\StringTok{"es\_ESP\_abcxxx"}\NormalTok{,}\StringTok{"es\_ESP\_percat"}\NormalTok{),]}
+\NormalTok{hc\_ESP[,.N,}\FunctionTok{list}\NormalTok{(who)]}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##              who      N
+## 1: es_ESP_abcxxx 280895
+## 2:  es_ESP_mundo  38457
+## 3: es_ESP_percat 142259
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{hc}\OtherTok{\textless{}{-}}\FunctionTok{rbind}\NormalTok{(hc\_FRA,hc\_DEU,hc\_GBR, hc\_ITA, hc\_ESP)}
+\NormalTok{hc}\OtherTok{\textless{}{-}}\NormalTok{hc[order}\SpecialCharTok{==}\DecValTok{1}\NormalTok{,]}
+\end{Highlighting}
+\end{Shaded}
+
+\hypertarget{table-of-news-by-media-and-year}{%
+\subsubsection{Table of news by media and
+year}\label{table-of-news-by-media-and-year}}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{tab }\OtherTok{\textless{}{-}}\NormalTok{ hc }
+\NormalTok{tab}\SpecialCharTok{$}\NormalTok{year}\OtherTok{\textless{}{-}}\FunctionTok{substr}\NormalTok{(}\FunctionTok{as.character}\NormalTok{(tab}\SpecialCharTok{$}\NormalTok{when),}\DecValTok{1}\NormalTok{,}\DecValTok{4}\NormalTok{)}
+\NormalTok{tab}\OtherTok{\textless{}{-}}\NormalTok{tab[}\FunctionTok{is.na}\NormalTok{(tab}\SpecialCharTok{$}\NormalTok{year)}\SpecialCharTok{==}\NormalTok{F]}
+\NormalTok{tab }\OtherTok{\textless{}{-}}\NormalTok{ tab[,.(}\AttributeTok{n =}\NormalTok{ .N), }\FunctionTok{list}\NormalTok{(year,who)]}
+\NormalTok{tab}\OtherTok{\textless{}{-}}\FunctionTok{dcast}\NormalTok{(tab,who}\SpecialCharTok{\textasciitilde{}}\NormalTok{year, }\AttributeTok{fill=}\DecValTok{0}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Using 'n' as value column. Use 'value.var' to override
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{mat}\OtherTok{\textless{}{-}}\FunctionTok{as.matrix}\NormalTok{(tab[,}\SpecialCharTok{{-}}\DecValTok{1}\NormalTok{])}
+\FunctionTok{row.names}\NormalTok{(mat)}\OtherTok{\textless{}{-}}\NormalTok{tab}\SpecialCharTok{$}\NormalTok{who}
+\NormalTok{tabfin }\OtherTok{\textless{}{-}} \FunctionTok{addmargins}\NormalTok{(mat)}
+\FunctionTok{kable}\NormalTok{(tabfin)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{tabular}{l|r|r|r|r|r|r|r|r|r}
+\hline
+  & 2013 & 2014 & 2015 & 2016 & 2017 & 2018 & 2019 & 2020 & Sum\\
+\hline
+de\_DEU\_diewel & 3950 & 8385 & 9706 & 7991 & 6654 & 4928 & 4050 & 1568 & 47232\\
+\hline
+de\_DEU\_frankf & 2858 & 6684 & 6155 & 5487 & 5807 & 6444 & 6117 & 2789 & 42341\\
+\hline
+de\_DEU\_suddeu & 3410 & 6058 & 7077 & 3251 & 2843 & 4409 & 3404 & 1202 & 31654\\
+\hline
+en\_GBR\_dailyt & 6476 & 13419 & 13188 & 10952 & 9899 & 8045 & 678 & 0 & 62657\\
+\hline
+en\_GBR\_guardi & 0 & 14372 & 20380 & 15490 & 10640 & 10785 & 10009 & 4606 & 86282\\
+\hline
+en\_GBR\_indept & 3861 & 8460 & 12268 & 14289 & 13037 & 13004 & 11072 & 4203 & 80194\\
+\hline
+es\_ESP\_abcxxx & 6528 & 14017 & 13752 & 11724 & 10971 & 10324 & 9959 & 4762 & 82037\\
+\hline
+es\_ESP\_mundo & 2673 & 7003 & 7872 & 6376 & 5467 & 5643 & 3361 & 0 & 38395\\
+\hline
+es\_ESP\_percat & 3038 & 8366 & 9079 & 7436 & 5924 & 7915 & 9304 & 4701 & 55763\\
+\hline
+fr\_FRA\_figaro & 5188 & 12096 & 14941 & 12487 & 13039 & 14590 & 17764 & 6564 & 96669\\
+\hline
+fr\_FRA\_lacroi & 7308 & 14770 & 13935 & 9088 & 17097 & 16379 & 14378 & 5483 & 98438\\
+\hline
+fr\_FRA\_lmonde & 3727 & 5761 & 6435 & 6749 & 7588 & 8001 & 7214 & 2966 & 48441\\
+\hline
+it\_ITA\_messag & 2170 & 6413 & 7180 & 7672 & 7659 & 7116 & 5454 & 2503 & 46167\\
+\hline
+it\_ITA\_repubb & 1603 & 3501 & 3756 & 6111 & 6176 & 5806 & 5590 & 3780 & 36323\\
+\hline
+it\_ITA\_stampa & 2064 & 5360 & 5487 & 5784 & 5204 & 4697 & 3762 & 2172 & 34530\\
+\hline
+Sum & 54854 & 134665 & 151211 & 130887 & 128005 & 128086 & 112116 & 47299 & 887123\\
+\hline
+\end{tabular}
+
+\end{document}
