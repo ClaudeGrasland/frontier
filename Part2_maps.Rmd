@@ -1,0 +1,852 @@
+---
+title: 'Frontier 1 : Maps'
+author: "Claude Grasland"
+date: "27/03/2021"
+output:
+  pdf_document: 
+    keep_tex: yes
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message =FALSE, error = FALSE)
+library(kableExtra)
+library(quanteda)
+library(data.table)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(sf)
+library(cartography)
+library(mapsf)
+```
+
+
+## DATA PREPARATION
+
+### Load hypercube
+
+We have collected titles of news declared as *international*  as long as we have depicted the existence of at less one foreign country in the text of the title. In each of the 5 countries, we have selected three newspapers with national audience and available through mediacloud database from mid 2013 to mid 2020. 
+
+
+
+```{r}
+hc_FRA<-readRDS("corpus/FRA/hc_FRA_states_mobil.Rdata")
+hc_FRA<-hc_FRA[who %in%  c("fr_FRA_lmonde", "fr_FRA_figaro","fr_FRA_lacroi"),]
+hc_FRA[,.N,list(who)]
+
+hc_DEU<-readRDS("corpus/DEU/hc_DEU_states_mobil.Rdata")
+hc_DEU<-hc_DEU[who %in%  c("de_DEU_suddeu", "de_DEU_diewel","de_DEU_frankf"),]
+hc_DEU[,.N,list(who)]
+
+
+hc_GBR<-readRDS("corpus/GBR/hc_GBR_states_mobil.Rdata")
+hc_GBR<-hc_GBR[who %in%  c("en_GBR_guardi", "en_GBR_indept","en_GBR_dailyt"),]
+hc_GBR[,.N,list(who)]
+
+hc_ITA<-readRDS("corpus/ITA/hc_ITA_states_mobil.Rdata")
+hc_ITA<-hc_ITA[who %in%  c("it_ITA_stampa", "it_ITA_repubb","it_ITA_messag"),]
+hc_ITA[,.N,list(who)]
+
+hc_ESP<-readRDS("corpus/ESP/hc_ESP_states_mobil.Rdata")
+hc_ESP<-hc_ESP[who %in%  c("es_ESP_mundo", "es_ESP_abcxxx","es_ESP_percat"),]
+hc_ESP[,.N,list(who)]
+
+hc<-rbind(hc_FRA,hc_DEU,hc_GBR, hc_ITA, hc_ESP)
+hc<-hc[order==1,]
+```
+
+
+### Compute news flow between host and guest countries and modelize
+
+What is the distribution of foreign news in each country ? We aggregate news for the whole period by host and guest countries. Then we modelize the expected number of news Fij through a double contrtaint model based on the marginal sums of news produced  by each host country (i) about each guest country (j). Estimation are realized by a **poisson regression model**. 
+
+```{r}
+tab<-hc
+# Rename variables
+tab$host<-substr(tab$who,4,6)
+tab$guest<-tab$where1
+
+# count news flow by host-guest countries
+tab <- tab[,.(n = round(sum(news),0)), list(guest,host)]
+
+# move from long to wide and back in order to fill missing with 0 
+tab<-dcast(tab,guest~host, fill=0,value.var = "n")
+tab2<-melt(tab,id.vars = "guest",variable.name = "host",value.name = "Fij")
+
+# Remove internal news
+tab2<-tab2[host!=guest,]
+
+# modelize random distribution with double constraint model
+model <- glm(data = tab2,
+             formula = Fij~guest+host, family = "poisson")
+
+# add estimates
+tab2$Eij<-model$fitted.values
+
+# add absolute residuals
+tab2$R1ij <-tab2$Fij-tab2$Eij
+
+# add relative residuals
+tab2$R2ij <-tab2$Fij/tab2$Eij
+
+# add chi-2 residuals
+tab2$R3ij <- (tab2$R1ij*tab2$R1ij)/tab2$Eij
+tab2$R3ij[tab2$R1ij<0] <- -tab2$R3ij[tab2$R1ij<0]
+
+
+# Build wide table
+
+tab1<-dcast(tab2,guest~host, fill=0,value.var = "Fij")
+names(tab1)<-c("ISO3","DEU_obs","ESP_obs","FRA_obs","GBR_obs","ITA_obs")
+tab1b<-dcast(tab2,guest~host, fill=0,value.var = "Eij")
+names(tab1b)<-c("ISO3","DEU_est","ESP_est","FRA_est","GBR_est","ITA_est")
+tab1<-merge(tab1,tab1b, by="ISO3")
+tab1b<-dcast(tab2,guest~host, fill=0,value.var = "R1ij")
+names(tab1b)<-c("ISO3","DEU_res_abs","ESP_res_abs","FRA_res_abs","GBR_res_abs","ITA_res_abs")
+tab1<-merge(tab1,tab1b, by="ISO3")
+tab1b<-dcast(tab2,guest~host, fill=0,value.var = "R2ij")
+names(tab1b)<-c("ISO3","DEU_res_rel","ESP_res_rel","FRA_res_rel","GBR_res_rel","ITA_res_rel")
+tab1<-merge(tab1,tab1b, by="ISO3")
+tab1b<-dcast(tab2,guest~host, fill=0,value.var = "R3ij")
+names(tab1b)<-c("ISO3","DEU_res_chi","ESP_res_chi","FRA_res_chi","GBR_res_chi","ITA_res_chi")
+tab1<-merge(tab1,tab1b, by="ISO3")
+
+
+```
+
+## Prepare world map
+
+We use the world map elaborated by Romain Leconte for his PhD and we choose the full version for centroid and the simplified version for drawing maps. We use a Lambrt Azimuthal Projection centerd on Paris with the formulata *crs = "+proj=laea +x_0=0 +y_0=0 +lon_0=2 +lat_0=49"*. 
+
+
+```{r}
+# Load maps
+world_ctr<-st_centroid(st_read("map/world_of_states_2020.shp", quiet =T),of_largest_polygon = T)
+world_map<-st_read("map/world_of_states_2020_simplified.shp", quiet=T)
+
+
+# Project : Lambert Azimuthal - center = Paris
+world_ctr = st_transform(world_ctr, 
+                           crs = "+proj=laea +x_0=0 +y_0=0 +lon_0=2 +lat_0=49")
+world_map= st_transform(world_map, 
+                           crs = "+proj=laea +x_0=0 +y_0=0 +lon_0=2 +lat_0=49")
+
+# Merge with observed and estimated values
+world_ctr<-merge(world_ctr,tab1,by="ISO3",all.x=T,all.y=F)
+world_map<-merge(world_map,tab1,by="ISO3",all.x=T,all.y=F)
+
+```
+
+
+We try(as an experiment) to use the new package `mapsf` elaborated by RIATE which is the follower of the well known package `cartography`. 
+
+https://riatelab.github.io/mapsf/articles/mapsf.html
+
+
+```{r}
+
+# import the sample data set
+# Initiate a base map
+mf_init(x = world_map, theme ="iceberg")
+
+# Plot a shadow
+mf_shadow(world_map, add = TRUE,cex = 0.3, col = "lightyellow")
+
+
+
+# layout
+mf_layout(title = "MAP PROJECTION LAMBERT AZIMUTHAL CENTERED ON PARIS",
+          arrow=FALSE,credits = "")
+
+```
+
+---
+
+
+
+```{r}
+
+# import the sample data set
+# Initiate a base map
+mf_init(x = world_map, theme ="iceberg")
+
+# Plot a shadow
+mf_shadow(world_map, add = TRUE,cex = 0.3, col = "gray80")
+
+# Plot empty map
+mf_map(world_map, type = "base", add = TRUE, border= "white", lwd=0.3)
+
+
+# plot news by % and rank
+world_ctr$size<-100*world_ctr$FRA_obs/sum(world_ctr$FRA_obs,na.rm=T)
+world_ctr$rnk<-rank(-world_ctr$size)
+world_ctr$top<-cut(world_ctr$rnk, breaks =c(0,5,20,40,80,210))
+levels(world_ctr$top) <- c("1-5","6-20","21-40","40-81",">81")
+world_ctr$top<-as.character(world_ctr$top)
+
+mf_prop_typo(
+  x = world_ctr, 
+  var = c("size", "top"), 
+  inches = .1, 
+  border = "gray20",
+  symbol = "circle", 
+  col_na = "grey", 
+  pal = c("red","orange","yellow","lightyellow","lightgreen"),
+  lwd = 0.3,
+  leg_pos = c("left", "topleft"),
+  leg_title = c("% of news", "rank"),
+  leg_title_cex = c(0.7, 0.7),
+  leg_val_rnd = 1,
+  leg_val_cex = c(.5, .7),
+  val_order = c("1-5","6-20","21-40","40-81",">81"),
+  leg_no_data = "No data",
+  leg_frame = c(FALSE, FALSE),
+  add = TRUE
+)
+
+
+# layout
+mf_layout(title = "THE WORLD SEEN BY FRENCH NEWSPAPERS (2013-2020)",
+          arrow=FALSE,credits = "")
+
+```
+
+```{r}
+x<-st_drop_geometry(world_ctr) %>% select("rnk","ISO3","NAME","FRA_obs","size") %>%
+  arrange(rnk) %>%
+  mutate(cum = cumsum(size))
+
+kable(head(x,15),
+                  digits = c(0,0,0,0,1,1),
+                  col.names = c("Rank", "Code","Country","Nb.of news","%","Cum. %"),
+                   caption = "Top countries mentionned by french newspapers (2013-2020)"
+                    )
+
+```
+
+---
+
+```{r}
+
+# import the sample data set
+# Initiate a base map
+mf_init(x = world_map, theme ="iceberg")
+
+# Plot a shadow
+mf_shadow(world_map, add = TRUE,cex = 0.3, col = "gray80")
+
+# Plot empty map
+mf_map(world_map, type = "base", add = TRUE, border= "white", lwd=0.3)
+
+
+# plot news by % and rank
+world_ctr$size<-100*world_ctr$DEU_obs/sum(world_ctr$DEU_obs,na.rm=T)
+world_ctr$rnk<-rank(-world_ctr$size)
+world_ctr$top<-cut(world_ctr$rnk, breaks =c(0,5,20,40,80,210))
+levels(world_ctr$top) <- c("1-5","6-20","21-40","40-81",">81")
+world_ctr$top<-as.character(world_ctr$top)
+
+mf_prop_typo(
+  x = world_ctr, 
+  var = c("size", "top"), 
+  inches = .1, 
+  border = "gray20",
+  symbol = "circle", 
+  col_na = "grey", 
+  pal = c("red","orange","yellow","lightyellow","lightgreen"),
+  lwd = 0.3,
+  leg_pos = c("left", "topleft"),
+  leg_title = c("% of news", "rank"),
+  leg_title_cex = c(0.7, 0.7),
+  leg_val_rnd = 1,
+  leg_val_cex = c(.5, .7),
+  val_order = c("1-5","6-20","21-40","40-81",">81"),
+  leg_no_data = "No data",
+  leg_frame = c(FALSE, FALSE),
+  add = TRUE
+)
+
+
+# layout
+mf_layout(title = "THE WORLD SEEN BY GERMAN NEWSPAPERS (2013-2020)",
+          arrow=FALSE,credits = "")
+
+```
+
+```{r}
+x<-st_drop_geometry(world_ctr) %>% select("rnk","ISO3","NAME","DEU_obs","size") %>%
+  arrange(rnk) %>%
+  mutate(cum = cumsum(size))
+
+kable(head(x,15),
+                  digits = c(0,0,0,0,1,1),
+                  col.names = c("Rank", "Code","Country","Nb.of news","%","Cum. %"),
+                   caption = "Top countries mentionned by german newspapers (2013-2020)"
+                    )
+
+```
+
+---
+
+```{r}
+
+# import the sample data set
+# Initiate a base map
+mf_init(x = world_map, theme ="iceberg")
+
+# Plot a shadow
+mf_shadow(world_map, add = TRUE,cex = 0.3, col = "gray80")
+
+# Plot empty map
+mf_map(world_map, type = "base", add = TRUE, border= "white", lwd=0.3)
+
+
+# plot news by % and rank
+world_ctr$size<-100*world_ctr$GBR_obs/sum(world_ctr$GBR_obs,na.rm=T)
+world_ctr$rnk<-rank(-world_ctr$size)
+world_ctr$top<-cut(world_ctr$rnk, breaks =c(0,5,20,40,80,210))
+levels(world_ctr$top) <- c("1-5","6-20","21-40","40-81",">81")
+world_ctr$top<-as.character(world_ctr$top)
+
+mf_prop_typo(
+  x = world_ctr, 
+  var = c("size", "top"), 
+  inches = .1, 
+  border = "gray20",
+  symbol = "circle", 
+  col_na = "grey", 
+  pal = c("red","orange","yellow","lightyellow","lightgreen"),
+  lwd = 0.3,
+  leg_pos = c("left", "topleft"),
+  leg_title = c("% of news", "rank"),
+  leg_title_cex = c(0.7, 0.7),
+  leg_val_rnd = 1,
+  leg_val_cex = c(.5, .7),
+  val_order = c("1-5","6-20","21-40","40-81",">81"),
+  leg_no_data = "No data",
+  leg_frame = c(FALSE, FALSE),
+  add = TRUE
+)
+
+
+# layout
+mf_layout(title = "THE WORLD SEEN BY BRITISH NEWSPAPERS (2013-2020)",
+          arrow=FALSE,credits = "")
+
+```
+
+```{r}
+x<-st_drop_geometry(world_ctr) %>% select("rnk","ISO3","NAME","GBR_obs","size") %>%
+  arrange(rnk) %>%
+  mutate(cum = cumsum(size))
+
+kable(head(x,15),
+                  digits = c(0,0,0,0,1,1),
+                  col.names = c("Rank", "Code","Country","Nb.of news","%","Cum. %"),
+                   caption = "Top countries mentionned by british newspapers (2013-2020)"
+                    )
+
+```
+
+---
+
+
+```{r}
+
+# import the sample data set
+# Initiate a base map
+mf_init(x = world_map, theme ="iceberg")
+
+# Plot a shadow
+mf_shadow(world_map, add = TRUE,cex = 0.3, col = "gray80")
+
+# Plot empty map
+mf_map(world_map, type = "base", add = TRUE, border= "white", lwd=0.3)
+
+
+# plot news by % and rank
+world_ctr$size<-100*world_ctr$ESP_obs/sum(world_ctr$ESP_obs,na.rm=T)
+world_ctr$rnk<-rank(-world_ctr$size)
+world_ctr$top<-cut(world_ctr$rnk, breaks =c(0,5,20,40,80,210))
+levels(world_ctr$top) <- c("1-5","6-20","21-40","40-81",">81")
+world_ctr$top<-as.character(world_ctr$top)
+
+mf_prop_typo(
+  x = world_ctr, 
+  var = c("size", "top"), 
+  inches = .1, 
+  border = "gray20",
+  symbol = "circle", 
+  col_na = "grey", 
+  pal = c("red","orange","yellow","lightyellow","lightgreen"),
+  lwd = 0.3,
+  leg_pos = c("left", "topleft"),
+  leg_title = c("% of news", "rank"),
+  leg_title_cex = c(0.7, 0.7),
+  leg_val_rnd = 1,
+  leg_val_cex = c(.5, .7),
+  val_order = c("1-5","6-20","21-40","40-81",">81"),
+  leg_no_data = "No data",
+  leg_frame = c(FALSE, FALSE),
+  add = TRUE
+)
+
+
+# layout
+mf_layout(title = "THE WORLD SEEN BY SPANISH NEWSPAPERS (2013-2020)",
+          arrow=FALSE,credits = "")
+
+```
+
+```{r}
+x<-st_drop_geometry(world_ctr) %>% select("rnk","ISO3","NAME","ESP_obs","size") %>%
+  arrange(rnk) %>%
+  mutate(cum = cumsum(size))
+
+kable(head(x,15),
+                  digits = c(0,0,0,0,1,1),
+                  col.names = c("Rank", "Code","Country","Nb.of news","%","Cum. %"),
+                   caption = "Top countries mentionned by spanish newspapers (2013-2020)"
+                    )
+
+```
+
+---
+
+
+```{r}
+
+# import the sample data set
+# Initiate a base map
+mf_init(x = world_map, theme ="iceberg")
+
+# Plot a shadow
+mf_shadow(world_map, add = TRUE,cex = 0.3, col = "gray80")
+
+# Plot empty map
+mf_map(world_map, type = "base", add = TRUE, border= "white", lwd=0.3)
+
+
+# plot news by % and rank
+world_ctr$size<-100*world_ctr$ITA_obs/sum(world_ctr$ITA_obs,na.rm=T)
+world_ctr$rnk<-rank(-world_ctr$size)
+world_ctr$top<-cut(world_ctr$rnk, breaks =c(0,5,20,40,80,210))
+levels(world_ctr$top) <- c("1-5","6-20","21-40","40-81",">81")
+world_ctr$top<-as.character(world_ctr$top)
+
+mf_prop_typo(
+  x = world_ctr, 
+  var = c("size", "top"), 
+  inches = .1, 
+  border = "gray20",
+  symbol = "circle", 
+  col_na = "grey", 
+  pal = c("red","orange","yellow","lightyellow","lightgreen"),
+  lwd = 0.3,
+  leg_pos = c("left", "topleft"),
+  leg_title = c("% of news", "rank"),
+  leg_title_cex = c(0.7, 0.7),
+  leg_val_rnd = 1,
+  leg_val_cex = c(.5, .7),
+  val_order = c("1-5","6-20","21-40","40-81",">81"),
+  leg_no_data = "No data",
+  leg_frame = c(FALSE, FALSE),
+  add = TRUE
+)
+
+
+# layout
+mf_layout(title = "THE WORLD SEEN BY ITALIAN NEWSPAPERS (2013-2020)",
+          arrow=FALSE,credits = "")
+
+```
+
+```{r}
+x<-st_drop_geometry(world_ctr) %>% select("rnk","ISO3","NAME","ITA_obs","size") %>%
+  arrange(rnk) %>%
+  mutate(cum = cumsum(size))
+
+kable(head(x,15),
+                  digits = c(0,0,0,0,1,1),
+                  col.names = c("Rank", "Code","Country","Nb.of news","%","Cum. %"),
+                   caption = "Top countries mentionned by italian newspapers (2013-2020)"
+                    )
+
+```
+
+
+
+
+
+
+```{r}
+
+# import the sample data set
+# Initiate a base map
+mf_init(x = world_map, theme ="iceberg")
+
+# Plot a shadow
+mf_shadow(world_map, add = TRUE,cex = 0.3, col = "lightyellow")
+
+
+# plot relative residuals
+mf_map(
+  x = world_map, 
+  var = "FRA_res_rel",
+  type = "choro",
+  breaks = c(0,0.25,0.5,1,2,4,1000),
+  pal  = hcl.colors(6, "Green-Orange", rev = FALSE),
+  border = "white", 
+  lwd = 0.5,
+  leg_pos = "topleft", 
+  leg_title = "Specialisation index",
+  leg_frame =FALSE,
+  add = TRUE
+) 
+
+
+# plot residual news
+world_ctr$size<-abs(world_ctr$FRA_res_chi)
+world_ctr$sign<-as.factor(world_ctr$FRA_res_abs > 0)
+levels(world_ctr$sign) <- c("Negative","Positive")
+
+mf_prop_typo(
+  x = world_ctr, 
+  var = c("size", "sign"), 
+  inches = .1, 
+  border = "gray20",
+  symbol = "circle", 
+  col_na = "grey", 
+  pal = c("darkorange","darkgreen"),
+  lwd = 0.3,
+  leg_pos = c("bottomleft", "left"),
+  leg_title = c("Residuals Chi-2", "Residuals sign"),
+  leg_title_cex = c(0.7, 0.7),
+  leg_val_cex = c(.7, .7),
+  val_order = c("Positive", "Negative"),
+  leg_no_data = "No data",
+  leg_frame = c(FALSE, FALSE),
+  add = TRUE
+)
+
+
+# layout
+mf_layout(title = "SPECIFIC FOCUS OF FRENCH NEWSPAPERS (2013-2020)",
+          arrow=FALSE,credits = "")
+
+```
+
+```{r}
+x<-st_drop_geometry(world_ctr) %>% select("ISO3","NAME","FRA_obs","FRA_est","FRA_res_abs","FRA_res_rel","FRA_res_chi") %>%
+  arrange(-FRA_res_chi)
+
+kable(head(x,15),
+                  digits = c(0,0,0,0,0,2,1),
+                  col.names = c("Code","Country","Observed","Estimated","Difference","Ratio","Chi-square"),
+                  row.names = 1:20,
+                   caption = "Most significant positive residuals of French Newspapers"
+                    )
+
+```
+
+
+---
+
+```{r}
+
+# import the sample data set
+# Initiate a base map
+mf_init(x = world_map, theme ="iceberg")
+
+# Plot a shadow
+mf_shadow(world_map, add = TRUE,cex = 0.3, col = "lightyellow")
+
+
+# plot relative residuals
+mf_map(
+  x = world_map, 
+  var = "DEU_res_rel",
+  type = "choro",
+  breaks = c(0,0.25,0.5,1,2,4,1000),
+  pal  = hcl.colors(6, "Green-Orange", rev = FALSE),
+  border = "white", 
+  lwd = 0.5,
+  leg_pos = "topleft", 
+  leg_title = "Specialisation index",
+  leg_frame =FALSE,
+  add = TRUE
+) 
+
+
+# plot residual news
+world_ctr$size<-abs(world_ctr$DEU_res_chi)
+world_ctr$sign<-as.factor(world_ctr$DEU_res_abs > 0)
+levels(world_ctr$sign) <- c("Negative","Positive")
+
+mf_prop_typo(
+  x = world_ctr, 
+  var = c("size", "sign"), 
+  inches = .1, 
+  border = "gray20",
+  symbol = "circle", 
+  col_na = "grey", 
+  pal = c("darkorange","darkgreen"),
+  lwd = 0.3,
+  leg_pos = c("bottomleft", "left"),
+  leg_title = c("Residuals Chi-2", "Residuals sign"),
+  leg_title_cex = c(0.7, 0.7),
+  leg_val_cex = c(.7, .7),
+  val_order = c("Positive", "Negative"),
+  leg_no_data = "No data",
+  leg_frame = c(FALSE, FALSE),
+  add = TRUE
+)
+
+
+# layout
+mf_layout(title = "SPECIFIC FOCUS OF GERMAN NEWSPAPERS (2013-2020)",
+          arrow=FALSE,credits = "")
+
+```
+
+
+
+```{r}
+x<-st_drop_geometry(world_ctr) %>% select("ISO3","NAME","DEU_obs","DEU_est","DEU_res_abs","DEU_res_rel","DEU_res_chi") %>%
+  arrange(-DEU_res_chi)
+
+kable(head(x,15),
+                  digits = c(0,0,0,0,0,2,1),
+                  col.names = c("Code","Country","Observed","Estimated","Difference","Ratio","Chi-square"),
+                  row.names = 1:20,
+                  caption = "Most significant positive residuals of German Newspapers"
+                    )
+
+```
+
+
+---
+
+
+```{r}
+
+# import the sample data set
+# Initiate a base map
+mf_init(x = world_map, theme ="iceberg")
+
+# Plot a shadow
+mf_shadow(world_map, add = TRUE,cex = 0.3, col = "lightyellow")
+
+
+# plot relative residuals
+mf_map(
+  x = world_map, 
+  var = "GBR_res_rel",
+  type = "choro",
+  breaks = c(0,0.25,0.5,1,2,4,1000),
+  pal  = hcl.colors(6, "Green-Orange", rev = FALSE),
+  border = "white", 
+  lwd = 0.5,
+  leg_pos = "topleft", 
+  leg_title = "Specialisation index",
+  leg_frame =FALSE,
+  add = TRUE
+) 
+
+
+# plot residual news
+world_ctr$size<-abs(world_ctr$GBR_res_chi)
+world_ctr$sign<-as.factor(world_ctr$GBR_res_abs > 0)
+levels(world_ctr$sign) <- c("Negative","Positive")
+
+mf_prop_typo(
+  x = world_ctr, 
+  var = c("size", "sign"), 
+  inches = .1, 
+  border = "gray20",
+  symbol = "circle", 
+  col_na = "grey", 
+  pal = c("darkorange","darkgreen"),
+  lwd = 0.3,
+  leg_pos = c("bottomleft", "left"),
+  leg_title = c("Residuals Chi-2", "Residuals sign"),
+  leg_title_cex = c(0.7, 0.7),
+  leg_val_cex = c(.7, .7),
+  val_order = c("Positive", "Negative"),
+  leg_no_data = "No data",
+  leg_frame = c(FALSE, FALSE),
+  add = TRUE
+)
+
+
+# layout
+mf_layout(title = "SPECIFIC FOCUS OF BRITISH NEWSPAPERS (2013-2020)",
+          arrow=FALSE,credits = "")
+
+```
+
+```{r}
+x<-st_drop_geometry(world_ctr) %>% select("ISO3","NAME","GBR_obs","GBR_est","GBR_res_abs","GBR_res_rel","GBR_res_chi") %>%
+  arrange(-GBR_res_chi)
+
+kable(head(x,15),
+                  digits = c(0,0,0,0,0,2,1),
+                  col.names = c("Code","Country","Observed","Estimated","Difference","Ratio","Chi-square"),
+                  row.names = 1:20,
+                  caption = "Most significant positive residuals of British Newspapers"
+                    )
+
+```
+
+
+---
+
+
+```{r}
+
+# import the sample data set
+# Initiate a base map
+mf_init(x = world_map, theme ="iceberg")
+
+# Plot a shadow
+mf_shadow(world_map, add = TRUE,cex = 0.3, col = "lightyellow")
+
+
+# plot relative residuals
+mf_map(
+  x = world_map, 
+  var = "ESP_res_rel",
+  type = "choro",
+  breaks = c(0,0.25,0.5,1,2,4,1000),
+  pal  = hcl.colors(6, "Green-Orange", rev = FALSE),
+  border = "white", 
+  lwd = 0.5,
+  leg_pos = "topleft", 
+  leg_title = "Specialisation index",
+  leg_frame =FALSE,
+  add = TRUE
+) 
+
+
+# plot residual news
+world_ctr$size<-abs(world_ctr$ESP_res_chi)
+world_ctr$sign<-as.factor(world_ctr$ESP_res_abs > 0)
+levels(world_ctr$sign) <- c("Negative","Positive")
+
+mf_prop_typo(
+  x = world_ctr, 
+  var = c("size", "sign"), 
+  inches = .1, 
+  border = "gray20",
+  symbol = "circle", 
+  col_na = "grey", 
+  pal = c("darkorange","darkgreen"),
+  lwd = 0.3,
+  leg_pos = c("bottomleft", "left"),
+  leg_title = c("Residuals Chi-2", "Residuals sign"),
+  leg_title_cex = c(0.7, 0.7),
+  leg_val_cex = c(.7, .7),
+  val_order = c("Positive", "Negative"),
+  leg_no_data = "No data",
+  leg_frame = c(FALSE, FALSE),
+  add = TRUE
+)
+
+
+# layout
+mf_layout(title = "SPECIFIC FOCUS OF SPANISH NEWSPAPERS (2013-2020)",
+          arrow=FALSE,credits = "")
+
+```
+
+
+```{r}
+x<-st_drop_geometry(world_ctr) %>% select("ISO3","NAME","ESP_obs","ESP_est","ESP_res_abs","ESP_res_rel","ESP_res_chi") %>%
+  arrange(-ESP_res_chi)
+
+kable(head(x,15),
+                  digits = c(0,0,0,0,0,2,1),
+                  col.names = c("Code","Country","Observed","Estimated","Difference","Ratio","Chi-square"),
+                  row.names = 1:20,
+                  caption = "Most significant positive residuals of Spanish Newspapers"
+                    )
+
+```
+
+
+---
+
+
+```{r}
+
+# import the sample data set
+# Initiate a base map
+mf_init(x = world_map, theme ="iceberg")
+
+# Plot a shadow
+mf_shadow(world_map, add = TRUE,cex = 0.3, col = "lightyellow")
+
+
+# plot relative residuals
+mf_map(
+  x = world_map, 
+  var = "ITA_res_rel",
+  type = "choro",
+  breaks = c(0,0.25,0.5,1,2,4,1000),
+  pal  = hcl.colors(6, "Green-Orange", rev = FALSE),
+  border = "white", 
+  lwd = 0.5,
+  leg_pos = "topleft", 
+  leg_title = "Specialisation index",
+  leg_frame =FALSE,
+  add = TRUE
+) 
+
+
+# plot residual news
+world_ctr$size<-abs(world_ctr$ITA_res_chi)
+world_ctr$sign<-as.factor(world_ctr$ITA_res_abs > 0)
+levels(world_ctr$sign) <- c("Negative","Positive")
+
+mf_prop_typo(
+  x = world_ctr, 
+  var = c("size", "sign"), 
+  inches = .1, 
+  border = "gray20",
+  symbol = "circle", 
+  col_na = "grey", 
+  pal = c("darkorange","darkgreen"),
+  lwd = 0.3,
+  leg_pos = c("bottomleft", "left"),
+  leg_title = c("Residuals Chi-2", "Residuals sign"),
+  leg_title_cex = c(0.7, 0.7),
+  leg_val_cex = c(.7, .7),
+  val_order = c("Positive", "Negative"),
+  leg_no_data = "No data",
+  leg_frame = c(FALSE, FALSE),
+  add = TRUE
+)
+
+
+# layout
+mf_layout(title = "SPECIFIC FOCUS OF ITALIAN NEWSPAPERS (2013-2020)",
+          arrow=FALSE,credits = "")
+
+```
+
+
+```{r}
+x<-st_drop_geometry(world_ctr) %>% select("ISO3","NAME","ITA_obs","ITA_est","ITA_res_abs","ITA_res_rel","ITA_res_chi") %>%
+  arrange(-ITA_res_chi)
+
+kable(head(x,15),
+                  digits = c(0,0,0,0,0,2,1),
+                  col.names = c("Code","Country","Observed","Estimated","Difference","Ratio","Chi-square"),
+                  row.names = 1:20,
+                  caption = "Most significant positive residuals of Italian Newspapers"
+                    )
+
+```
+
+---
