@@ -3,9 +3,9 @@ title: 'Frontier  : Geopolitical networks'
 author: "Claude Grasland"
 date: "27/03/2021"
 output:
-  html_document: default
   pdf_document: 
     keep_tex: yes
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -32,24 +32,24 @@ We have collected titles of news declared as *international*  as long as we have
 ```{r}
 hc_FRA<-readRDS("corpus/FRA/hc_FRA_states_mobil.Rdata")
 hc_FRA<-hc_FRA[who %in%  c("fr_FRA_lmonde", "fr_FRA_figaro","fr_FRA_lacroi"),]
-hc_FRA[,.N,list(who)]
+
 
 hc_DEU<-readRDS("corpus/DEU/hc_DEU_states_mobil.Rdata")
 hc_DEU<-hc_DEU[who %in%  c("de_DEU_suddeu", "de_DEU_diewel","de_DEU_frankf"),]
-hc_DEU[,.N,list(who)]
+
 
 
 hc_GBR<-readRDS("corpus/GBR/hc_GBR_states_mobil.Rdata")
 hc_GBR<-hc_GBR[who %in%  c("en_GBR_guardi", "en_GBR_indept","en_GBR_dailyt"),]
-hc_GBR[,.N,list(who)]
+
 
 hc_ITA<-readRDS("corpus/ITA/hc_ITA_states_mobil.Rdata")
 hc_ITA<-hc_ITA[who %in%  c("it_ITA_stampa", "it_ITA_repubb","it_ITA_messag"),]
-hc_ITA[,.N,list(who)]
+
 
 hc_ESP<-readRDS("corpus/ESP/hc_ESP_states_mobil.Rdata")
 hc_ESP<-hc_ESP[who %in%  c("es_ESP_mundo", "es_ESP_abcxxx","es_ESP_percat"),]
-hc_ESP[,.N,list(who)]
+
 
 hc<-rbind(hc_FRA,hc_DEU,hc_GBR, hc_ITA, hc_ESP)
 
@@ -80,7 +80,7 @@ world_map= st_transform(world_map,
 
 
 
-## TRIADIC NETWORKS OF INTERNATIONAL RELATION
+## INTERNATIONAL NETWORKS
 
 In this section, we propose to demonstrate the interest of an analysis of triadic network of international relations which can be briefly defined as the *perception of the relation between two countries by the media of another country*. In terms of cultural conflict, it is indeed of utmost importance to take into account the role of *third party* which can be observer but also actors in the dynamic of opinion at global scale.  If we consider for example the crisis of Crimea, it is typically an example of conflictual geopolitical link (between Ukraine and Russia) which is perceived and reported differently in chinese, indian or german newspapers. The same would be true for the geopolitical links between Israel and Palestine, Northern and Southern Korea, USA and Venezuela, etc.
 
@@ -97,15 +97,12 @@ The method of co-quotation of countries has been firstly applied by Segev (2010)
 - *Regional network* : like Egyptian news where the network is not characterized by a dominant hub but by a mixture of countries of equal importance (Egypt, Israel, Palestina , USA, Syria, Lebanon)
 
 
-```{r}
-include_graphics("img/Segev2010a.png")
-```
+![Association of countries in Russian news (Segev, 2010)](img/Segev2010a.png){width=90%}
+
 
 The analysis of co-occurence of countries in foreign news has been also proposed by Grasland, Giraud & Severo (2011,2016) in a paper about the perception of Arab Spring in the title of news published by the  *New York Time* and *Liberation* between 11 May and 9 August 2011. In these case, the research focused on the linkages established by media between countries located in eastern and southern Mediterranean where the Arab Spring took place.  
 
-```{r}
-include_graphics("img/grasland_giraud_severo_2011.png")
-```
+![The Arab Spring in French and US newspapers (Grasland, Severo & Giraud, 2011)](img/grasland_giraud_severo_2011.png){width=90%}
 
 
 The authors demonstrated through this approach the existence of a systemic perception of the geopolitcal transformation occuring in the southern and eastern Mediterranean.  But the analysis revealed also different focus in the US and french newspaper. The network of the NYT is more focused on the eastern part of the area with a major interest in the case of the Israel-Palestin conflict but also in the Syrian civil war. The network of the french newspaper Liberation is also focused on the Israel-Palestin conflict but provide more attention to the Tunisia and the other countries from Maghreb. This differences are in line with geopolitical priorities which were not exactly the same for France and USA during this period of time
@@ -145,7 +142,21 @@ top<- hc %>% filter(where2 > where1) %>%
                      pct = round(100*wgt/sum(wgt),2))%>%
               arrange(rnk)
 
-kable(top[1:20,c(1,2,4)],row.names = 1:20, caption = "Top linkages for media from 5 western European countries (1st July 2013 to 30th June 2020",)
+knitr::kables(
+  list(
+    # the first kable() 
+    knitr::kable(
+     top[1:10,c(3,1,2,4)], valign = 't'),
+    # the second kable() 
+    knitr::kable(
+     top[11:20,c(3,1,2,4)], valign = 't'),
+      # the third kable()
+        knitr::kable(
+     top[21:30,c(3,1,2,4)], valign = 't')
+  ),
+  caption = 'Top linkages for media from 5 western European countries (1st July 2013 to 30th June 2020'
+)
+
 
 ```
 
@@ -174,14 +185,14 @@ top_who<- hc %>% filter(where2 > where1) %>%
               ungroup() %>%
               group_by(host) %>%
               mutate(rnk = rank(-wgt)) %>%
-              filter(rnk < 11) %>%
+              filter(rnk < 21) %>%
               pivot_wider(names_from = host, values_from=dyad, id_cols=rnk) %>%
               arrange(rnk) 
 top_who<-top_who[,-1]
 top_who<-top_who[,order(names(top_who))]
 
 kable(top_who,
-      row.names = 1:10, 
+      row.names = 1:20, 
       caption = "Variation of top international dyads by host country",
       col.names = c("Germany", "Spain", "France", "U.K.","Italy"))
 ```
@@ -190,10 +201,99 @@ The analysis of the variation of the top international by country of localizatio
 
 - The *Israel-Palestin* conflict appears in first rank of dyads mentionned in all countries, with the exception of Germany where it appears only in 6th rank. If this difference is not related to a problem in the dictionary of countries (**to be verified**) it reveals a real originality of German newspapers as compared to the rest of western Europe? 
 - The *Russia-Ukraine* dyad appears in first rank in Germany, in second rank in Spain, France and UK and in third rank in Italy. It is therefore the most consensual topic of geopolitical interest of our sample. 
-- *Specific dyads* appears in the top-10 of countries, in relation with cultural proximities inherited from history and related to language or former colonial relations. It is typically the case of the dyads linking Australia and New-Zealand or Australia and India in UK newspapers. Or the high level of the dyads USA-Mexico and USA-Cuba in the case of spanish newspapers 
+- *Specific dyads* appears in the top-10 of countries, in relation with cultural proximities inherited from history and related to language or former colonial relations. It is typically the case of the dyads linking Australia and New-Zealand or Australia and India in UK newspapers. Or the high level of the dyads USA-Mexico and USA-Cuba in the case of spanish newspapers. Or the link between Greece and Turkey in German newspapers, etc. 
 
 
-### A hierarchical network of geopolitical domination in news
+
+## SPATIAL NETWORK
+
+How to propose a spatialization of the networks previously described ? We propose in a first step a version of the global network based on intensity and transparency, like the famous Facebook global connexion map realized by Paul Butler in 2010.
+
+![Facebook Global Connexion Map (Butler, 2010)](img/facebook_butler_map.png){width=70%}
+
+
+
+
+
+
+
+```{r, eval=FALSE}
+
+
+
+# Prepare links
+links <- net %>% filter(Fij>5)
+world_links <- mf_get_links(x = world_ctr, df = links)
+world_links$level <- 100*world_links$Fij / sum(world_links$Fij)
+world_links$size <- 0.5+sqrt(world_links$level)
+world_links <-world_links %>% arrange(Fij)
+
+# prepare nodes 
+nodes <- net %>% group_by(i) %>% summarise(size=sum(Fij)) %>% rename(ISO3 =i)
+world_nodes <- left_join(world_ctr,nodes)
+world_nodes$level <- 100*world_nodes$size / sum(world_nodes$size,na.rm=T)
+world_nodes$size <- 2+world_nodes$level/10
+
+# Initiate a base map
+mf_init(x = world_map, theme ="dark",
+        res = 200,
+        width = 1500,
+        height = 1200,
+        export="png",
+        filename = "img/News_global.png")
+
+mf_map(world_map, type = "base", add = TRUE, border= "gray70", lwd=0.3,col="gray40")
+
+
+mycols <- mf_get_pal(n = 10, pal = "Orange", alpha = seq(0.01,1,0.1))
+
+
+# Plot links
+mf_map(world_links, 
+       breaks=c(0,5,10,20,50,100,200,500,1000, 2000, 5000),
+       type = "choro",
+       var = "Fij",
+       lwd = world_links$size,
+       pal = mycols,
+       leg_pos = "n",
+       add=T)
+
+# Plot nodes
+mf_map(world_nodes, 
+       type = "prop",
+       var = "level",
+       inches = 0.06,
+       col = "lightyellow",
+       border= "red",
+       leg_pos = "n",
+       add=T)
+
+
+
+# layout
+mf_layout(title = "NETWORK OF NEWS (2013-2020)",
+          scale = FALSE,
+          arrow=FALSE,
+          credits = "H2020 ODYCCEUS Project - Université de Paris - 2021")
+
+
+
+
+
+```
+
+
+
+![Network of international news](img/News_global.png){width=90%}
+
+
+
+
+The network of news appears clearly dominated by major world power (Russia, Usa, China, Japan, France, Germany and UK) but also by major conflicts occuring in the period (Ukraine, Syria, Northern Korea, Iran, ...). The Middle East appears as an area of central interest for our sample of media from western Europe. Latin America is also relatively well connected, thanks to the focus of spanish newspapers and the olympic games of 2016 held in Brazil. But the most striking fact is the lack of interest for the majority of african countries, except the northern part and the RSA. Th same is true to some extent for south eastern Asia countries which are very few mentionned, except by british newspapers.  We have of course to notice that these map of dyad focus on the countries that are associated with other in the news. Therefore, the countries that are mentioned alone in news are less visible.  Biut the fact to be isolated is precisely an evidence of marginal situation in the vision of the world produce by European newspapers. 
+
+
+
+## DOMINANT NETWORK
 
 The distribution of dyads over a long period of time and for a large set of newspapers offers the possibility to establish an international network of relation which can reveal structural position of countries according to a hierarchy of dominant, intermediary and dominated countries. To establish this hierarchy, we use the method of *dominant flows* initially developped by John D. Nyusten & Michael F. Dacey (1961) for the delineation of nodal regions based on a graph of tecommunication flows between cities. Considering a matrix of weigthed dyads between countries  $\mathcal{N}_{ij}$, the authors consider that a country $i$ is dominated by a country $j$ if two conditions are verified : 
 
@@ -214,7 +314,7 @@ The application of the method to all countries of the world define a graph which
 
 The advantage of the method is to produce a simplified but very clear divsion of the network in hierarchical regions centered on a dominant geopolitical actor. The application to our sample of western European newspapers for the period 2013-2020 produce an exciting picture of the world seen by media. 
 
-```{r}
+```{r, eval = FALSE}
 exclude_countries <-c("SDS","COG","GIN")
 net<- hc %>% filter(where2 != where1) %>%
              filter(!where1 %in% exclude_countries) %>%
@@ -318,15 +418,27 @@ mf_layout(title = "DOMINANT FLOW OF NEWS (2013-2020)",
 ```
 
 
-```{r}
-include_graphics("img/DomNews_global.png")
-```
 
 
-The map reveals firstly the existence of three giant trees centered respectively on USA, Russia and European Union. 
+![Dominant flows in international news](img/DomNews_global.png){width=90%}
 
-- **The American network** is firstly centered on countries from northern and central america, with the relay of nodes located in Mexico and Venezuela, but excluding the southern part of the continents which is polarized by Russia through Brazil. 
 
-- **The Russian network** covers firstly countries from forme Soiet Union, Central Asia and Middle East, with very important linkages with Ukraine on the one hand, Syria and Turkey on the other hand. The impôrtance of the Russian network has clearly grown during the last years and was less important in the previous work realized by Elad Segev in 2009. Without any doubt, the geopolitical activism of Russia is reflected by the media. More suprinsingly, Russia appears also strongly connected with Brazil which is a relay for the southern part of Latin America. The explanation of this linkage is probably to be found to the events of the Olympic Games of 2016 in Brazil where Russia was initially excluded and finally accepted. 
+
+The map reveals firstly the existence of four global networks which take the form of giant trees centered respectively on USA, Russia , European Union and Australia 
+
+- **The American network** is the largest one. It is firstly centered on countries from northern and central America, wich are directly dominated by USA or indirectly through the branchs of Mexico and Venezuela. The network is extended to south-eastern Asia through the major branch of China which dominates Japan, Taiwan, Phlipinnes, ... The "special relation" between USA and Great Britain is confirmed by another branch across the northern atlantic but with few secondary connections in EU, except Ireland. Last but not least, important links are observed between USA and Iran or Afghanistan, which is clearly in line with the geopoilitical implication of USA in this countries during the period. But we do not observe dominant links with the rest of Middle-East where the network structure reveals the role of other major players?
+
+- **The Russian network** covers firstly countries from former Soviet Union, Central Asia and Middle East, with very important linkages with Ukraine on the one hand, Syria and Turkey on the other hand, followed by secondqry links with Iraq, Lebanon or Jordan. The impôrtance of the Russian network has clearly grown during the last years and was less important in the previous work realized by Elad Segev in 2009. Without any doubt, the geopolitical activism of Russia is reflected by the media. More suprinsingly, Russia appears also strongly connected with Brazil which is a relay for the southern part of Latin America. The explanation of this linkage is probably to be found to the events of the Olympic Games of 2016 in Brazil where Russia was initially excluded and finally accepted. 
+
+- **The European Union network** is organized around the dual core of France and Germany which are characterized by a strong reciprocal link (497) and and equivalent number of external dyads (4683 and 4784). The strict application of the model of Nyusten & Dacey which would implies a domination of France by Germany should be relaxed considering the small différence of size and it is more relevant to consider both countries as a common backbone. Each of the two core countries organize a specific sub-tree. France network covers south-western Europe and northern Africa with important sub-branch in Spain and Italy. Germany netwok is more oriented toward eastern Europe, with major sub-branch in Austria or Greece. 
+
+- **The Australian network** plays clearly a major role in Oceania but also southern Africa and south eastern Asia. Two important secondary branchs take place in New Zealand and RSA. The importance of this Australian network does not necessarily fit with a real domination of the country in terms of hard power. It is rather a reflect of the smart power of Australia in the eyes of newspapers from Western Europe and - in particular - british newspapers which are stro,ngly connected to australian newspapers by financial ties (Cf. Murdoch empire). 
+
+Out of this four giant components, we can observe more regional or local networks that are generally based on the existence of couples of strongly connected countries like Israel and Palestin, Northern and Southern Korea, India and Pakistan, Saudi Arabia and Yemen, Sweden and Denmark... 
+
+
+
+
+
 
 
